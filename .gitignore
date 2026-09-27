@@ -1,0 +1,11 @@
+# runtime data (patient-facing demo db lives in data/)
+data/
+*.log
+
+# dependencies
+node_modules/
+
+# browser-harness evidence + screenshots (regenerated per run)
+test/browser-evidence*/
+# runtime process state
+server.pid
