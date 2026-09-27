@@ -12,6 +12,7 @@ const engine = require('../src/staging-engine');
 const ajcc = require('../src/ajcc');
 const adapter = require('../src/ajcc-adapter');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const providers = require('../src/staging-providers');
 
 const { ADMIN, MO, dx } = setupBreastFixture();
@@ -75,31 +76,31 @@ const licensedTransport = async () => licensedPack();
     engine.evaluate(schema, pack, { classification: 'PATHOLOGICAL', variables: FACTS }).status === 'CONTENT_PROVIDER_UNAVAILABLE');
 
   console.log('\n== sign-gate contract: same gate, licensed derivation ==');
-  const header = clinical.stagingSchemaFor(dx.uuid);
+  const header = staging.stagingSchemaFor(dx.uuid);
   check('schema header reports engine AVAILABLE with the licensed pack', header.engine.status === 'AVAILABLE' && header.engine.packId === 'AJCC_BREAST_CTNM_LICENSED_POC');
   check('schema header hides hand-pickable t/n/m/stage for covered context', header.engine.resultFields.includes('t') && header.engine.resultFields.includes('stageResult'));
 
-  const a = clinical.createStagingAssessment(MO, {
+  const a = staging.createStagingAssessment(MO, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: dateStr(0),
     variables: Object.assign({}, FACTS), resultSource: 'AUTOMATIC_ENGINE'
   });
-  const signed = clinical.signStagingAssessment(MO, a.uuid);
+  const signed = staging.signStagingAssessment(MO, a.uuid);
   check('signed record carries the engine-derived stage', signed.status === 'SIGNED' && signed.stageResult === 'STAGE_IIB' && signed.resultLabel === 'Stage IIB');
   check('machine-readable derivation trace stored with the record (§27)', signed.derivationTrace && signed.derivationTrace.status === 'CALCULATED' && signed.derivationTrace.packId === 'AJCC_BREAST_CTNM_LICENSED_POC' && signed.derivationTrace.normalizedInputs.tumourSizeMm === 28);
 
-  const tampered = clinical.createStagingAssessment(MO, {
+  const tampered = staging.createStagingAssessment(MO, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: dateStr(0),
     variables: Object.assign({}, FACTS, { stageResult: 'STAGE_IA' }), resultSource: 'AUTOMATIC_ENGINE'
   });
   expectError('tampered result refused — sign gate re-derives and compares',
-    () => clinical.signStagingAssessment(MO, tampered.uuid), 'must match the engine-derived result');
+    () => staging.signStagingAssessment(MO, tampered.uuid), 'must match the engine-derived result');
 
-  const incomplete = clinical.createStagingAssessment(MO, {
+  const incomplete = staging.createStagingAssessment(MO, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: dateStr(0),
     variables: { tumourSizeMm: 28 }, resultSource: 'AUTOMATIC_ENGINE'
   });
   expectError('incomplete facts refused at sign — NEEDS_INFORMATION is never signable',
-    () => clinical.signStagingAssessment(MO, incomplete.uuid), 'NEEDS_INFORMATION');
+    () => staging.signStagingAssessment(MO, incomplete.uuid), 'NEEDS_INFORMATION');
 
   console.log('\n== adapter status snapshot (admin visibility) ==');
   const st = adapter.statusSnapshot();

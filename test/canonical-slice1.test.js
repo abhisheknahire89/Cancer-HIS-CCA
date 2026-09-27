@@ -12,6 +12,7 @@ const store = require('../src/store');
 const wf = require('../src/workflow');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 const providers = require('../src/staging-providers');
 const rbac = require('../src/rbac');
@@ -297,7 +298,7 @@ console.log('\n== NEGATIVE: RBAC (canonical §48) ==');
 expectGate('Front Desk cannot record diagnosis', () =>
   flow.recordDiagnosis(ACTORS.front, { patientUuid: patient.uuid, cancerType: 'BREAST', primarySite: 'BREAST', histology: 'IDC', diagnosisDate: dateStr(-1), diagnosisBasis: 'PATHOLOGY' }), 'not authorized');
 expectGate('Lab cannot sign staging', () =>
-  clinical.signStagingAssessment(ACTORS.lab, stgSigned.uuid), 'not authorized');
+  staging.signStagingAssessment(ACTORS.lab, stgSigned.uuid), 'not authorized');
 expectGate('External Consultant is read-only', () =>
   rbac.assertCanWrite(ACTORS.ext, 'recordResult'), 'read-only');
 check('RBAC allows MO to sign diagnosis', (rbac.WRITE_RULES['Medical Oncologist'] || []).includes('signDiagnosis'));

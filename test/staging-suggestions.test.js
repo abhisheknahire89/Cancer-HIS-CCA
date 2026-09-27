@@ -3,7 +3,7 @@
 // source kind matches the fact, from the relevant staging window (assessment date
 // − N months). These tests pin the window filter, per-fact source-kind filtering,
 // record-shape (picker-compatible), and role authorization. No server required;
-// the HTTP route is a thin pass-through to clinical.stagingEvidenceSuggestions.
+// the HTTP route is a thin pass-through to staging.stagingEvidenceSuggestions.
 // Run: node test/staging-suggestions.test.js
 'use strict';
 const fs = require('fs');
@@ -16,6 +16,7 @@ process.env.CCA_DATA_DIR = path.join(TMP, 'data');
 const store = require('../src/store');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 
 let pass = 0, failCount = 0;
@@ -92,14 +93,14 @@ const ct = clinical.recordResult(RAD, {
 // window end and must not be offered for that earlier assessment).
 
 console.log('\n== §24 window filter: assessment date today, 6-month default window ==');
-const today = clinical.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(0));
+const today = staging.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(0));
 check('returns window metadata (§25)', today.window && today.window.months === 6 && today.window.end === dateStr(0) && Math.abs(new Date(today.window.start) - new Date(dateStr(-183))) < 2 * 86400000);
 check('echoes the queried fact', today.fact === 'tumourSizeMm');
 check('in-window radiology suggested for tumourSizeMm', today.suggestions.some(s => s.sourceResourceId === mammo.uuid));
 check('in-window pathology suggested for tumourSizeMm (hint: RADIOLOGICAL+PATHOLOGICAL)', today.suggestions.some(s => s.sourceResourceId === biopsy.uuid));
 check('record 200d old is OUTSIDE the 6-month window', !today.suggestions.some(s => s.sourceResourceId === cbc.uuid));
 check('results dated after the assessment are outside a past-anchored window (future-record guard, §25)', (() => {
-  const s = clinical.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(-95));
+  const s = staging.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(-95));
   return !s.suggestions.some(x => x.sourceResourceId === mammo.uuid);
 })());
 check('PRELIMINARY results never suggested (provenance must be signed)', !store.find('results', r => r.resultStatus === 'PRELIMINARY' && today.suggestions.some(s => s.sourceResourceId === r.uuid)).length);
@@ -107,26 +108,26 @@ check('suggestion items carry picker-compatible link shape', ['evidenceId', 'evi
 check('no silent attachment — output is a candidate list the clinician confirms', Array.isArray(today.suggestions));
 
 console.log('\n== §24 per-fact source-kind filter ==');
-const nodal = clinical.stagingEvidenceSuggestions(patient.uuid, 'clinicalNodalStatus', dateStr(0));
+const nodal = staging.stagingEvidenceSuggestions(patient.uuid, 'clinicalNodalStatus', dateStr(0));
 check('CLINICAL-inclusive fact surfaces the signed consultation as a candidate', nodal.suggestions.some(s => s.sourceResourceId === consult.uuid && s.evidenceType === 'CLINICAL_EXAM'));
-const labFact = clinical.stagingEvidenceSuggestions(patient.uuid, 'beta2Microglobulin', dateStr(0));
+const labFact = staging.stagingEvidenceSuggestions(patient.uuid, 'beta2Microglobulin', dateStr(0));
 check('lab-only fact excludes radiology/pathology records', !labFact.suggestions.some(s => s.sourceResourceId === mammo.uuid || s.sourceResourceId === biopsy.uuid));
 check('pathology-only fact excludes imaging and consultations', (() => {
-  const s = clinical.stagingEvidenceSuggestions(patient.uuid, 'regionalNodesPositive', dateStr(0));
+  const s = staging.stagingEvidenceSuggestions(patient.uuid, 'regionalNodesPositive', dateStr(0));
   return s.suggestions.some(x => x.sourceResourceId === biopsy.uuid) &&
     !s.suggestions.some(x => x.sourceResourceId === mammo.uuid) &&
     !s.suggestions.some(x => x.sourceResourceId === consult.uuid);
 })());
 check('unknown fact falls back to all kinds (honest broadest default)', (() => {
-  const s = clinical.stagingEvidenceSuggestions(patient.uuid, 'nonexistentField', dateStr(0));
+  const s = staging.stagingEvidenceSuggestions(patient.uuid, 'nonexistentField', dateStr(0));
   return s.sourceTypes === null && s.suggestions.length >= 3;
 })());
 
 console.log('\n== §25 window end anchors to the assessment date ==');
-const past = clinical.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(-95));
+const past = staging.stagingEvidenceSuggestions(patient.uuid, 'tumourSizeMm', dateStr(-95));
 check('window anchored 95d back: 150d-old imaging inside, 10d-old imaging outside', past.suggestions.some(s => s.sourceResourceId === ct.uuid) && !past.suggestions.some(s => s.sourceResourceId === mammo.uuid));
 check('custom window length respected (12 months includes the 200d lab)', (() => {
-  const s = clinical.stagingEvidenceSuggestions(patient.uuid, 'beta2Microglobulin', dateStr(0), 12);
+  const s = staging.stagingEvidenceSuggestions(patient.uuid, 'beta2Microglobulin', dateStr(0), 12);
   return s.window.months === 12 && s.suggestions.some(x => x.sourceResourceId === cbc.uuid);
 })());
 
@@ -137,7 +138,7 @@ console.log('\n== Fresh patient: empty window, honest empty state ==');
 const { patient: p2 } = clinical.registerPatient(FRONT, {
   name: 'Suggestion Empty', mrn: 'SUGG-2', sex: 'F', dob: '1980-01-01', phone: '555-0198', address: '10 Way', hospitalUuid: 'h-sugg'
 });
-const empty = clinical.stagingEvidenceSuggestions(p2.uuid, 'tumourSizeMm', dateStr(0));
+const empty = staging.stagingEvidenceSuggestions(p2.uuid, 'tumourSizeMm', dateStr(0));
 check('no records → empty suggestions array (UI shows honest empty state)', empty.suggestions.length === 0);
 
 console.log('\n' + pass + ' passed, ' + failCount + ' failed');

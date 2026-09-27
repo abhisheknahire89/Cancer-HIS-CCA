@@ -6,6 +6,7 @@ const wf = require('./workflow');
 const masters = require('./masters');
 const providers = require('./staging-providers');
 const clinical = require('./clinical');
+const staging = require('./staging');
 const rbac = require('./rbac');
 
 const { uuid, nowIso, gate, sign, assertNotSigned, createTask } = wf;
@@ -265,9 +266,9 @@ function signDiseaseProfile(actor, dpUuid) {
 
 // ---- §12–§21 Staging with version routing -----------------------------------
 function stagingSchemaFor(diagnosisUuid) {
-  // Delegates to the single authoritative resolver (clinical.stagingSchemaFor) so
+  // Delegates to the single authoritative resolver (staging.stagingSchemaFor) so
   // every consumer sees identical authority/schema/version routing.
-  return clinical.stagingSchemaFor(diagnosisUuid);
+  return staging.stagingSchemaFor(diagnosisUuid);
 }
 
 // §14: version resolves by diagnosis date + site + histology + authority.
@@ -296,8 +297,8 @@ function createStagingAssessment(actor, data) {
 
   const { key, provider } = providers.resolveProvider(dx);
   gate(key === 'TNM_FALLBACK', 'STOP_GATE: no governed staging schema for this disease (pack selection not permitted)');
-  // Locked resolved snapshot (directive §26) — same contract as clinical.createStagingAssessment
-  const resolved = clinical.resolvedSnapshotFor(dx);
+  // Locked resolved snapshot (directive §26) — same contract as staging.createStagingAssessment
+  const resolved = staging.resolvedSnapshotFor(dx);
 
   // Biomarker consumption: staging may READ the signed disease profile; never own it.
   let profile = store.find('diseaseProfiles', p => p.diagnosisUuid === dx.uuid)
@@ -347,7 +348,7 @@ function signStagingAssessment(actor, assessmentUuid) {
   const dx = store.byUuid('diagnoses', a.diagnosisUuid);
   // Shared sign-time gates (schema lock, unknown fields, governed values,
   // evidence-per-fact, same-patient supersession) — directive §26/§39
-  const { key, provider } = clinical.applyStagingSignGates(a, dx);
+  const { key, provider } = staging.applyStagingSignGates(a, dx);
 
   const derived = provider.deriveStage(a);
   a.stageResult = derived.stage || a.stageResult || null; // engine path: shared gate set the derived result

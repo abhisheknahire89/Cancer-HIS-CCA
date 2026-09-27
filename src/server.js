@@ -7,6 +7,7 @@ const wf = require('./workflow');
 const masters = require('./masters');
 const clinical = require('./clinical');
 const flow = require('./clinical-flow');
+const staging = require('./staging');
 const treatment = require('./treatment');
 const providers = require('./staging-providers');
 const rbac = require('./rbac');
@@ -131,17 +132,17 @@ app.get('/ws/rest/v1/cca/biomarkers', wrap((req, res) => {
 app.get('/ws/rest/v1/cca/audit/verify', wrap((req, res) => ok(res, store.verifyAuditChain())));
 
 // staging schema for a diagnosis (drives the staging form)
-app.get('/ws/rest/v1/cca/staging/schema/:diagnosisUuid', wrap((req, res) => ok(res, clinical.stagingSchemaFor(req.params.diagnosisUuid))));
+app.get('/ws/rest/v1/cca/staging/schema/:diagnosisUuid', wrap((req, res) => ok(res, staging.stagingSchemaFor(req.params.diagnosisUuid))));
 // AUTOMATIC STAGING (mandate §11/§14/§15): server-side authoritative evaluation —
 // the frontend previews but never owns derivation. Stateless + deterministic.
 app.post('/ws/rest/v1/cca/staging/evaluate', wrap((req, res) => {
   const dx = store.byUuid('diagnoses', req.body.diagnosisUuid);
   if (!dx) return fail(res, new Error('Diagnosis not found'));
-  const s = clinical.stagingSchemaFor(req.body.diagnosisUuid);
+  const s = staging.stagingSchemaFor(req.body.diagnosisUuid);
   ok(res, engine.evaluate(s.fields, engine.packFor(s.providerKey, s.schemaId), { classification: req.body.classification || req.body.stagingContext, variables: req.body.variables || {} }));
 }));
 app.get('/ws/rest/v1/cca/staging/evaluate/:diagnosisUuid', wrap((req, res) => {
-  const s = clinical.stagingSchemaFor(req.params.diagnosisUuid);
+  const s = staging.stagingSchemaFor(req.params.diagnosisUuid);
   ok(res, engine.evaluate(s.fields, engine.packFor(s.providerKey, s.schemaId), { variables: {} }));
 }));
 // Directive §16/§33/§34: authority/schema resolution, registry, licences
@@ -235,10 +236,10 @@ app.get('/ws/rest/v1/cca/staging/summary/:patientUuid', wrap((req, res) => {
 // §24/§25: staging-window candidate records for a focused fact — clinician
 // confirms the link; nothing is attached silently.
 app.get('/ws/rest/v1/cca/staging/suggestions/:patientUuid', wrap((req, res) => {
-  ok(res, clinical.stagingEvidenceSuggestions(req.params.patientUuid, req.query.fact || '', req.query.assessmentDate, req.query.months));
+  ok(res, staging.stagingEvidenceSuggestions(req.params.patientUuid, req.query.fact || '', req.query.assessmentDate, req.query.months));
 }));
 app.get('/ws/rest/v1/cca/staging/evidence-picker/:patientUuid', wrap((req, res) => {
-  ok(res, clinical.stagingEvidenceItems(req.params.patientUuid, {}));
+  ok(res, staging.stagingEvidenceItems(req.params.patientUuid, {}));
 }));
 
 app.post('/ws/rest/v1/cca/patients', wrapWrite('registerPatient', (req, res, actor) => ok(res, clinical.registerPatient(actor, req.body))));
@@ -269,9 +270,9 @@ app.post('/ws/rest/v1/cca/diagnoses', wrapWrite('recordDiagnosis', (req, res, ac
 app.post('/ws/rest/v1/cca/diagnoses/:uuid/sign', wrapWrite('signDiagnosis', (req, res, actor) => ok(res, clinical.signDiagnosis(actor, req.params.uuid))));
 app.post('/ws/rest/v1/cca/diagnoses/:uuid/revise', wrapWrite('reviseDiagnosis', (req, res, actor) => ok(res, flow.reviseDiagnosis(actor, req.params.uuid, req.body))));
 
-app.post('/ws/rest/v1/cca/staging-assessments', wrapWrite('createStagingAssessment', (req, res, actor) => ok(res, clinical.createStagingAssessment(actor, req.body))));
-app.post('/ws/rest/v1/cca/staging-assessments/:uuid/flag', wrapWrite('flagStagingDiscrepancy', (req, res, actor) => ok(res, clinical.flagStagingDiscrepancy(actor, req.params.uuid, req.body || {}))));
-app.post('/ws/rest/v1/cca/staging-assessments/:uuid/sign', wrapWrite('signStagingAssessment', (req, res, actor) => ok(res, clinical.signStagingAssessment(actor, req.params.uuid))));
+app.post('/ws/rest/v1/cca/staging-assessments', wrapWrite('createStagingAssessment', (req, res, actor) => ok(res, staging.createStagingAssessment(actor, req.body))));
+app.post('/ws/rest/v1/cca/staging-assessments/:uuid/flag', wrapWrite('flagStagingDiscrepancy', (req, res, actor) => ok(res, staging.flagStagingDiscrepancy(actor, req.params.uuid, req.body || {}))));
+app.post('/ws/rest/v1/cca/staging-assessments/:uuid/sign', wrapWrite('signStagingAssessment', (req, res, actor) => ok(res, staging.signStagingAssessment(actor, req.params.uuid))));
 
 // ---- Phase 2 -----------------------------------------------------------------
 app.post('/ws/rest/v1/cca/mdt-cases', wrapWrite('openMdtCase', (req, res, actor) => ok(res, clinical.openMdtCase(actor, req.body))));
@@ -495,13 +496,13 @@ function latestActiveOrderFor(patientUuid) {
 function patientChart(uuid) {
   const p = store.byUuid('patients', uuid);
   const dx = latestDiagnosisFor(uuid);
-  const staging = store.find('stagingAssessments', s => s.patientUuid === uuid).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const currentStaging = staging.find(s => s.status === 'SIGNED') || null;
+  const stagingList = store.find('stagingAssessments', s => s.patientUuid === uuid).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const currentStaging = stagingList.find(s => s.status === 'SIGNED') || null;
   const order = latestActiveOrderFor(uuid);
   return {
     patient: p,
     diagnosis: dx,
-    staging: { current: currentStaging, history: staging },
+    staging: { current: currentStaging, history: stagingList },
     consultations: store.find('consultations', c => c.patientUuid === uuid).sort((a, b) => new Date(a.at) - new Date(b.at)),
     investigationOrders: store.find('investigationOrders', o => o.patientUuid === uuid),
     results: store.find('results', r => r.patientUuid === uuid),

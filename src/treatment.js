@@ -7,6 +7,7 @@ const wf = require('./workflow');
 const rbac = require('./rbac');
 const masters = require('./masters');
 const clinical = require('./clinical');
+const staging = require('./staging');
 
 const { uuid, nowIso, gate, sign, createTask, assertNotSigned } = wf;
 
@@ -843,10 +844,10 @@ function signOperativeRecord(actor, recUuid) {
   createTask(actor, 'ADJUVANT_DECISION', rec.patientUuid, { operativeRecordUuid: rec.uuid, reason: 'post-op adjuvant decision' });
   // Slice E catch-up: if specimen histopathology finalized while the record was
   // still open, emit the restaging trigger now that the record is signed — via the
-  // same funnel (clinical.maybeCreatePathologicalRestaging) as every other path.
+  // same funnel (staging.maybeCreatePathologicalRestaging) as every other path.
   for (const o of store.find('investigationOrders', x => x.operativeRecordUuid === recUuid)) {
     const fin = store.find('results', r => r.orderUuid === o.uuid && ['FINAL', 'AMENDED', 'CORRECTED'].includes(r.resultStatus))[0];
-    if (fin) clinical.maybeCreatePathologicalRestaging(actor, rec.patientUuid, o, fin);
+    if (fin) staging.maybeCreatePathologicalRestaging(actor, rec.patientUuid, o, fin);
   }
   store.audit(actor, 'OPERATIVE_RECORD_SIGNED', 'operativeRecord', rec.uuid, rec.performedProcedure);
   return rec;

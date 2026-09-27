@@ -14,6 +14,7 @@ process.env.CCA_DATA_DIR = path.join(TMP, 'data');
 const store = require('../src/store');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 const engine = require('../src/staging-engine');
 const providers = require('../src/staging-providers');
@@ -55,7 +56,7 @@ const dx = flow.recordDiagnosis(MO, {
 });
 const dxSigned = flow.signDiagnosis(MO, dx.uuid);
 
-const schema = clinical.stagingSchemaFor(dxSigned.uuid);
+const schema = staging.stagingSchemaFor(dxSigned.uuid);
 check('diagnosis → schema auto-resolved (no clinician pack picking)', schema.providerKey === 'MM' && schema.authority === 'ISS_RISS');
 check('no T/N/M fields for non-TNM schema (§47)', !['t', 'n', 'm'].some(k => schema.fields.some(f => f.key === k)));
 check('derivation pack AVAILABLE for MM (public IMWG criteria)', schema.engine.status === 'AVAILABLE' && schema.engine.packId === 'MYELOMA_ISS_RISS_PUBLIC');
@@ -69,7 +70,7 @@ check('engine availability reported honestly for TNM disease (breast → CONTENT
     patientUuid: p2.uuid, episodeUuid: c2.episodeUuid, cancerFamily: 'BREAST_FAMILY', cancerType: 'BREAST',
     primarySite: 'BREAST', histology: 'IDC', icd10: 'C50', icdOVersion: 'ICD-O-3.2', diagnosisDate: dateStr(-2), diagnosisBasis: 'IMAGING'
   });
-  const s = clinical.stagingSchemaFor(flow.signDiagnosis(MO, dx2.uuid).uuid);
+  const s = staging.stagingSchemaFor(flow.signDiagnosis(MO, dx2.uuid).uuid);
   return s.providerKey === 'TNM_BREAST' && s.engine.status === 'CONTENT_PROVIDER_UNAVAILABLE';
 })());
 check('TNM disease schema carries objective FACT inputs (§8)', (() => {

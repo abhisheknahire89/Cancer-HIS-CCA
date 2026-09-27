@@ -12,6 +12,7 @@ const store = require('../src/store');
 const wf = require('../src/workflow');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const treatment = require('../src/treatment');
 const consent = require('../src/consent');
 
@@ -65,7 +66,7 @@ const reg = clinical.registerPatient(front, { name: 'Gate Tester', dob: '1970-01
 const pid = reg.patient.uuid;
 
 check('staging blocked before signed diagnosis',
-  expectGate(() => clinical.stagingSchemaFor('no-such-diagnosis')));
+  expectGate(() => staging.stagingSchemaFor('no-such-diagnosis')));
 
 const dx = clinical.recordDiagnosis(onc, {
   patientUuid: pid, cancerType: 'BREAST', primarySite: 'BREAST', histology: 'IDC',
@@ -90,10 +91,10 @@ check('signed diagnosis is immutable (re-sign rejected)',
   expectGate(() => clinical.signDiagnosis(onc, dx.uuid)));
 
 check('staging requires SIGNED diagnosis',
-  expectGate(() => clinical.createStagingAssessment(onc, { diagnosisUuid: 'missing', stagingContext: 'CLINICAL', assessmentDate: d(0), variables: {} })));
+  expectGate(() => staging.createStagingAssessment(onc, { diagnosisUuid: 'missing', stagingContext: 'CLINICAL', assessmentDate: d(0), variables: {} })));
 
 check('fabricated staging value rejected at signing', () => {
-  const a = clinical.createStagingAssessment(onc, {
+  const a = staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0),
     variables: { t: 'T99', n: 'N0', m: 'M0', stageResult: 'STAGE_I' },
     evidence: [
@@ -102,12 +103,12 @@ check('fabricated staging value rejected at signing', () => {
       { variableKey: 'm', sourceType: 'RADIOLOGICAL', sourceDate: d(-1), supportingFinding: 'no distant spread' }
     ]
   });
-  try { clinical.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
+  try { staging.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
   throw new Error('expected rejection');
 });
 
 check('unknown staging field rejected at signing', () => {
-  const a = clinical.createStagingAssessment(onc, {
+  const a = staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0),
     variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_I', unicornField: 'x' },
     evidence: [
@@ -116,14 +117,14 @@ check('unknown staging field rejected at signing', () => {
       { variableKey: 'm', sourceType: 'RADIOLOGICAL', sourceDate: d(-1), supportingFinding: 'x' }
     ]
   });
-  try { clinical.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
+  try { staging.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
   throw new Error('expected rejection');
 });
 
 check('future assessment date rejected',
-  expectGate(() => clinical.createStagingAssessment(onc, { diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(5), variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_I' } })));
+  expectGate(() => staging.createStagingAssessment(onc, { diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(5), variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_I' } })));
 
-const stg = clinical.createStagingAssessment(onc, {
+const stg = staging.createStagingAssessment(onc, {
   diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0),
   variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_II' },
   evidence: [
@@ -132,16 +133,16 @@ const stg = clinical.createStagingAssessment(onc, {
     { variableKey: 'm', sourceType: 'RADIOLOGICAL', sourceDate: d(-1), supportingFinding: 'no distant metastases' }
   ]
 });
-const stgSigned = clinical.signStagingAssessment(onc, stg.uuid);
+const stgSigned = staging.signStagingAssessment(onc, stg.uuid);
 
 check('T category without linked evidence is rejected (directive §20)',
-  expectGate(() => clinical.signStagingAssessment(onc, clinical.createStagingAssessment(onc, {
+  expectGate(() => staging.signStagingAssessment(onc, staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0),
     variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_II' }
   }).uuid)));
 
 check('evidence citing unknown staging field rejected',
-  expectGate(() => clinical.signStagingAssessment(onc, clinical.createStagingAssessment(onc, {
+  expectGate(() => staging.signStagingAssessment(onc, staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'PATHOLOGICAL', assessmentDate: d(0),
     variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_II' },
     evidence: [
@@ -158,7 +159,7 @@ const dx2 = clinical.recordDiagnosis(onc, { patientUuid: reg2.patient.uuid, canc
 clinical.signDiagnosis(onc, dx2.uuid);
 
 check('cross-patient supersession rejected', () => {
-  const a = clinical.createStagingAssessment(onc, {
+  const a = staging.createStagingAssessment(onc, {
     diagnosisUuid: dx2.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0), supersedes: stg.uuid,
     variables: { t: 'T1', n: 'N0', m: 'M0', stageResult: 'STAGE_I' },
     evidence: [
@@ -167,12 +168,12 @@ check('cross-patient supersession rejected', () => {
       { variableKey: 'm', sourceType: 'RADIOLOGICAL', sourceDate: d(-1), supportingFinding: 'x' }
     ]
   });
-  try { clinical.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
+  try { staging.signStagingAssessment(onc, a.uuid); } catch (e) { e.expected = true; throw e; }
   throw new Error('expected rejection');
 });
 
 check('restaging of same patient supersedes correctly', () => {
-  const a = clinical.createStagingAssessment(onc, {
+  const a = staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'PATHOLOGICAL', assessmentDate: d(0), supersedes: stg.uuid,
     variables: { t: 'T2', n: 'N1', stageResult: 'STAGE_IIB' }, // no pM0 — M stays with the clinical assessment (§9)
     evidence: [
@@ -180,7 +181,7 @@ check('restaging of same patient supersedes correctly', () => {
       { variableKey: 'n', sourceType: 'PATHOLOGICAL', sourceDate: d(-1), supportingFinding: 'nodes positive' }
     ]
   });
-  const s = clinical.signStagingAssessment(onc, a.uuid);
+  const s = staging.signStagingAssessment(onc, a.uuid);
   if (s.status !== 'SIGNED') throw new Error('not signed');
   const prev = store.byUuid('stagingAssessments', stg.uuid);
   if (prev.status !== 'SUPERSEDED') throw new Error('previous not superseded');

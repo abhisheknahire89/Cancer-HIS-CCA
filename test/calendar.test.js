@@ -13,6 +13,7 @@ process.env.CCA_DATA_DIR = path.join(TMP, 'data');
 const store = require('../src/store');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 const treatment = require('../src/treatment');
 const calendar = require('../src/calendar');
@@ -57,12 +58,12 @@ const dx = flow.recordDiagnosis(MO, { patientUuid: patient.uuid, cancerType: 'BR
 flow.signDiagnosis(MO, dx.uuid);
 
 const { provider } = resolveProvider({ cancerType: 'BREAST' });
-const stg = clinical.createStagingAssessment(MO, { diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: '2026-09-05', variables: { t: 'T2', n: 'N1', m: 'M0', stageResult: 'STAGE_IIB' }, evidence: [
+const stg = staging.createStagingAssessment(MO, { diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: '2026-09-05', variables: { t: 'T2', n: 'N1', m: 'M0', stageResult: 'STAGE_IIB' }, evidence: [
   { variableKey: 't', sourceType: 'PATHOLOGICAL', sourceRef: pathResult.uuid, supportingFinding: 'specimen' },
   { variableKey: 'n', sourceType: 'CLINICAL', sourceDate: '2026-09-04', supportingFinding: 'palpable node' },
   { variableKey: 'm', sourceType: 'CLINICAL', sourceDate: '2026-09-04', supportingFinding: 'no distant disease' }
 ] });
-clinical.signStagingAssessment(MO, stg.uuid);
+staging.signStagingAssessment(MO, stg.uuid);
 
 const cp = clinical.createCarePlan(MO, { patientUuid: patient.uuid, diagnosisUuid: dx.uuid, treatmentIntent: 'CURATIVE', lineOfTherapy: 'L1', expectedStart: '2026-09-20', systemicTherapy: 'AC x4' });
 clinical.signCarePlan(MO, cp.uuid);

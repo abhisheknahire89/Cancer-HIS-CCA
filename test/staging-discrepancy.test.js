@@ -14,6 +14,7 @@ process.env.CCA_DATA_DIR = path.join(TMP, 'data');
 const store = require('../src/store');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 const engine = require('../src/staging-engine');
 const wf = require('../src/workflow');
@@ -55,39 +56,39 @@ const dx = flow.signDiagnosis(MO, flow.recordDiagnosis(MO, {
   icdOVersion: 'ICD-O-3.2', diagnosisDate: dateStr(-3), diagnosisBasis: 'BONE_MARROW'
 }).uuid);
 
-const draft = clinical.createStagingAssessment(MO, {
+const draft = staging.createStagingAssessment(MO, {
   diagnosisUuid: dx.uuid, stagingContext: 'NON_TNM', assessmentDate: dateStr(0),
   variables: { beta2Microglobulin: 4.2, albumin: 3.8 },
   resultSource: 'AUTOMATIC_ENGINE'
 });
-const signed = clinical.signStagingAssessment(MO, draft.uuid);
+const signed = staging.signStagingAssessment(MO, draft.uuid);
 check('signed engine-derived result exists (ISS_II)', signed.status === 'SIGNED' && signed.stageResult === 'ISS_II');
 
 console.log('\n== §31 flag creation: reason + requested correction are mandatory ==');
-const stillDraft = clinical.createStagingAssessment(MO, {
+const stillDraft = staging.createStagingAssessment(MO, {
   diagnosisUuid: dx.uuid, stagingContext: 'NON_TNM', assessmentDate: dateStr(0),
   variables: { beta2Microglobulin: 4.2, albumin: 3.8 }, resultSource: 'AUTOMATIC_ENGINE'
 });
-expectGate('flagging a DRAFT assessment rejected', () => clinical.flagStagingDiscrepancy(MO, stillDraft.uuid, { reason: 'x', requestedCorrection: 'y' }), 'SIGNED');
-expectGate('missing reason rejected', () => clinical.flagStagingDiscrepancy(MO, signed.uuid, { requestedCorrection: 're-check nodes' }), 'reason is required');
-expectGate('missing requested correction rejected', () => clinical.flagStagingDiscrepancy(MO, signed.uuid, { reason: 'node finding not reflected' }), 'requested correction is required');
-const flag = clinical.flagStagingDiscrepancy(MO, signed.uuid, {
+expectGate('flagging a DRAFT assessment rejected', () => staging.flagStagingDiscrepancy(MO, stillDraft.uuid, { reason: 'x', requestedCorrection: 'y' }), 'SIGNED');
+expectGate('missing reason rejected', () => staging.flagStagingDiscrepancy(MO, signed.uuid, { requestedCorrection: 're-check nodes' }), 'reason is required');
+expectGate('missing requested correction rejected', () => staging.flagStagingDiscrepancy(MO, signed.uuid, { reason: 'node finding not reflected' }), 'requested correction is required');
+const flag = staging.flagStagingDiscrepancy(MO, signed.uuid, {
   reason: 'Derived ISS II, but the lab slip shows β2M 5.6 — specimen mix-up suspected',
   requestedCorrection: 'Re-enter β2M from the corrected lab record; re-derive'
 });
 check('flag persisted OPEN with both fields', flag.status === 'OPEN' && flag.reason.length > 0 && flag.requestedCorrection.length > 0 && flag.flaggedResult === 'ISS_II');
 check('flag routed a STAGING_DISCREPANCY task to the Medical Oncologist', wf.openTasksForRole('Medical Oncologist').some(t => t.code === 'STAGING_DISCREPANCY' && t.payload && t.payload.flagUuid === flag.uuid));
-expectGate('second OPEN flag on the same assessment rejected', () => clinical.flagStagingDiscrepancy(MO, signed.uuid, { reason: 'r', requestedCorrection: 'c' }));
+expectGate('second OPEN flag on the same assessment rejected', () => staging.flagStagingDiscrepancy(MO, signed.uuid, { reason: 'r', requestedCorrection: 'c' }));
 
 console.log('\n== §31 loop closure: corrected facts re-derive; superseding signature resolves flag + task ==');
-const corrected = clinical.createStagingAssessment(MO, {
+const corrected = staging.createStagingAssessment(MO, {
   diagnosisUuid: dx.uuid, stagingContext: 'NON_TNM', assessmentDate: dateStr(0),
   variables: { beta2Microglobulin: 5.8, albumin: 3.8 },
   evidence: [],
   supersedes: signed.uuid,
   resultSource: 'AUTOMATIC_ENGINE'
 });
-const correctedSigned = clinical.signStagingAssessment(MO, corrected.uuid);
+const correctedSigned = staging.signStagingAssessment(MO, corrected.uuid);
 check('corrected facts re-derive ISS_III (no hand-editing)', correctedSigned.stageResult === 'ISS_III');
 const reread = store.byUuid('stagingAssessments', signed.uuid);
 check('original signed assessment superseded (immutable record, never edited)', reread.status === 'SUPERSEDED' && reread.stageResult === 'ISS_II' && reread.reason === undefined);
@@ -96,13 +97,13 @@ check('flag RESOLVED pointing at the corrective assessment', resolved.status ===
 check('flag review task consumed by the corrective signature (§49)', !wf.openTasksForRole('Medical Oncologist').some(t => t.code === 'STAGING_DISCREPANCY' && t.payload && t.payload.flagUuid === flag.uuid));
 
 console.log('\n== §31 engine gate: sign refuses a result the engine cannot derive ==');
-const badDraft = clinical.createStagingAssessment(MO, {
+const badDraft = staging.createStagingAssessment(MO, {
   diagnosisUuid: dx.uuid, stagingContext: 'NON_TNM', assessmentDate: dateStr(0),
   variables: { beta2Microglobulin: 4.2 }, // albumin missing → NEEDS_INFORMATION
   supersedes: correctedSigned.uuid,
   resultSource: 'AUTOMATIC_ENGINE'
 });
-expectGate('incomplete facts refuse to sign (no stage guessed)', () => clinical.signStagingAssessment(MO, badDraft.uuid), 'NEEDS_INFORMATION');
+expectGate('incomplete facts refuse to sign (no stage guessed)', () => staging.signStagingAssessment(MO, badDraft.uuid), 'NEEDS_INFORMATION');
 
 console.log('\n== §31 summary + header: current staging reflects the corrected result ==');
 const summary = flow.getStagingSummary(patient.uuid);

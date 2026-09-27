@@ -14,6 +14,7 @@ process.env.CCA_DATA_DIR = path.join(TMP, 'data');
 const store = require('../src/store');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const flow = require('../src/clinical-flow');
 
 let pass = 0, failCount = 0;

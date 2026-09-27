@@ -13,6 +13,7 @@ const store = require('../src/store');
 const wf = require('../src/workflow');
 const masters = require('../src/masters');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const treatment = require('../src/treatment');
 const consent = require('../src/consent');
 
@@ -46,7 +47,7 @@ function breastCase(name) {
     diagnosisDate: d(-10), diagnosisBasis: 'PATHOLOGY'
   });
   clinical.signDiagnosis(onc, dx.uuid);
-  const stg = clinical.createStagingAssessment(onc, {
+  const stg = staging.createStagingAssessment(onc, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(-5),
     variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_II' },
     evidence: [
@@ -55,7 +56,7 @@ function breastCase(name) {
       { variableKey: 'm', sourceType: 'CLINICAL', sourceDate: d(-5), supportingFinding: 'no distant metastases on assessment' }
     ]
   });
-  clinical.signStagingAssessment(onc, stg.uuid);
+  staging.signStagingAssessment(onc, stg.uuid);
   return { pid, dx };
 }
 
@@ -120,7 +121,7 @@ const consultA = clinical.recordConsultation(onc, {
   clinicalAssessment: 'Post-op day 1: mobile, afebrile, drains intact'
 });
 clinical.signConsultation(onc, consultA.uuid);
-const pStg = clinical.createStagingAssessment(onc, {
+const pStg = staging.createStagingAssessment(onc, {
   diagnosisUuid: A.dx.uuid, stagingContext: 'PATHOLOGICAL', assessmentDate: d(0),
   variables: { t: 'T2', n: 'N1', m: 'M1', stageResult: 'STAGE_IV' },
   evidence: [
@@ -130,7 +131,7 @@ const pStg = clinical.createStagingAssessment(onc, {
   ]
 });
 check('pTNM assessment signs with result + consultation evidence (picker/validator aligned)', () => {
-  const signed = clinical.signStagingAssessment(onc, pStg.uuid);
+  const signed = staging.signStagingAssessment(onc, pStg.uuid);
   assert(signed.status === 'SIGNED', 'not signed');
   assert(signed.classificationPrefix === 'p', 'prefix got ' + signed.classificationPrefix);
 });
@@ -139,12 +140,12 @@ check('both CLINICAL and PATHOLOGICAL assessments coexist in history', () => {
   assert(all.some(s => s.stagingContext === 'CLINICAL') && all.some(s => s.stagingContext === 'PATHOLOGICAL'), 'history incomplete');
 });
 check('pM0 rejected under pathological classification (engine rule intact)', () => {
-  const bad = clinical.createStagingAssessment(onc, {
+  const bad = staging.createStagingAssessment(onc, {
     diagnosisUuid: A.dx.uuid, stagingContext: 'PATHOLOGICAL', assessmentDate: d(0),
     variables: { t: 'T2', n: 'N1', m: 'M0', stageResult: 'STAGE_II' },
     evidence: [{ variableKey: 't', sourceType: 'PATHOLOGICAL', sourceRef: taskA.payload.resultUuid, sourceDate: d(0), supportingFinding: 'x' }]
   });
-  try { clinical.signStagingAssessment(onc, bad.uuid); } catch (e) {
+  try { staging.signStagingAssessment(onc, bad.uuid); } catch (e) {
     if (/pM0|M0 does not exist/i.test(e.message)) return;
     throw e;
   }
@@ -287,12 +288,12 @@ check('MO consult sign completes the FIRST_CONSULT task without creating a ghost
 
 console.log('== Staging evidence: cross-patient protection intact ==');
 check('cross-patient staging evidence still rejected', () => {
-  const bad = clinical.createStagingAssessment(onc, {
+  const bad = staging.createStagingAssessment(onc, {
     diagnosisUuid: E.dx.uuid, stagingContext: 'CLINICAL', assessmentDate: d(0),
     variables: { t: 'T2', n: 'N0', m: 'M0', stageResult: 'STAGE_II' },
     evidence: [{ variableKey: 't', sourceType: 'RADIOLOGICAL', sourceRef: taskA.payload.resultUuid, sourceDate: d(0), supportingFinding: 'stolen evidence' }]
   });
-  try { clinical.signStagingAssessment(onc, bad.uuid); } catch (e) {
+  try { staging.signStagingAssessment(onc, bad.uuid); } catch (e) {
     if (/CROSS_PATIENT_EVIDENCE/.test(e.message)) return;
     throw e;
   }

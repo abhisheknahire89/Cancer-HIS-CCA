@@ -17,6 +17,7 @@ const engine = require('../src/staging-engine');
 const ajcc = require('../src/ajcc');
 const adapter = require('../src/ajcc-adapter');
 const clinical = require('../src/clinical');
+const staging = require('../src/staging');
 const providers = require('../src/staging-providers');
 
 const { ADMIN, MO, dx } = setupBreastFixture();
@@ -71,18 +72,18 @@ const stub = http.createServer((req, res) => {
   check('CALCULATED: T2 N1 cM0 → Stage IIB from objective facts', d1.status === 'CALCULATED' && d1.categories.tCategory === 'T2' && d1.categories.nCategory === 'N1' && d1.categories.mCategory === 'cM0' && d1.result === 'STAGE_IIB');
   check('trace carries licensed provenance from the fetched content', d1.packId === connected.packId && /Licensed AJCC API content/.test(d1.provenance));
 
-  const a = clinical.createStagingAssessment(MO, {
+  const a = staging.createStagingAssessment(MO, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: dateStr(0),
     variables: Object.assign({}, FACTS), resultSource: 'AUTOMATIC_ENGINE'
   });
-  const signed = clinical.signStagingAssessment(MO, a.uuid);
+  const signed = staging.signStagingAssessment(MO, a.uuid);
   check('sign gate accepts and stores the wire-derived stage + trace', signed.status === 'SIGNED' && signed.stageResult === 'STAGE_IIB' && signed.derivationTrace && signed.derivationTrace.status === 'CALCULATED');
-  const tampered = clinical.createStagingAssessment(MO, {
+  const tampered = staging.createStagingAssessment(MO, {
     diagnosisUuid: dx.uuid, stagingContext: 'CLINICAL', assessmentDate: dateStr(0),
     variables: Object.assign({}, FACTS, { stageResult: 'STAGE_IA' }), resultSource: 'AUTOMATIC_ENGINE'
   });
   await expectErrorAsync('tampered result refused by the unchanged gate',
-    () => clinical.signStagingAssessment(MO, tampered.uuid), 'must match the engine-derived result');
+    () => staging.signStagingAssessment(MO, tampered.uuid), 'must match the engine-derived result');
 
   console.log('\n== fail-closed branches over real HTTP (registry must stay untouched) ==');
   const licensedCount = () => engine.packsSnapshot().filter(p => p.source === 'LICENSED_AJCC_API').length;
