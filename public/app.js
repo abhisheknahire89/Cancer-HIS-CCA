@@ -1557,7 +1557,8 @@ function formSurgery(card, task, chart) {
   const date = el('input', { type: 'date', value: new Date().toISOString().slice(0, 10) });
   const findings = el('textarea', { placeholder: 'Operative findings' });
   const specimen = el('input', { placeholder: 'Specimen site (creates pathology task)' });
-  card.append(el('div', { class: 'grid3' }, wrap('Procedure *', procedure), wrap('Laterality', laterality), wrap('Planned date *', date)));
+  card.append(el('div', { class: 'grid3' }, wrap('Procedure *', procedure), wrap('Laterality', laterality), wrap('Planned date *', date)),
+    el('div', { class: 'grid2' }, wrap('Operative findings', findings), wrap('Specimen site', specimen)));
   card.append(el('button', {
     class: 'btn', onclick: async () => {
       try {
