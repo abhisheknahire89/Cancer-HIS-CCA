@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CCA OS — Administration</title>
+<link rel="stylesheet" href="app.css" />
+<style>
+  .masterbtn { display: block; width: 100%; text-align: left; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; margin-bottom: 4px; cursor: pointer; font-size: 12.5px; }
+  .masterbtn.active { background: var(--teal); color: #fff; border-color: var(--teal-dark); }
+  .adminwrap { display: grid; grid-template-columns: 220px 1fr; gap: 18px; }
+  @media (max-width: 900px) { .adminwrap { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">◉</span> CCA Oncology <span class="sub">Administration — governed masters &amp; hospital configuration</span></div>
+  <div class="topbar-right">
+    <label>Signed in as
+      <select id="userSel">
+        <option value="u-admin">Administrator</option>
+        <option value="u-onc1">Medical Oncologist</option>
+      </select>
+    </label>
+    <a href="/" style="color:#bfe9e3;font-size:12px">← back to clinical app</a>
+  </div>
+</header>
+<main>
+  <div class="adminwrap">
+    <div>
+      <h2 style="margin-top:0">Governed Masters (23)</h2>
+      <div id="masterList"></div>
+    </div>
+    <div>
+      <div id="itemBox" class="card"></div>
+      <div id="hospitalBox" class="card"></div>
+      <div id="stagingRegistryBox" class="card"></div>
+      <div id="licenceBox" class="card"></div>
+      <div id="contentPackBox" class="card"></div>
+    </div>
+  </div>
+</main>
+<div id="toast" class="toast hidden"></div>
+<script src="admin.js"></script>
+</body>
+</html>

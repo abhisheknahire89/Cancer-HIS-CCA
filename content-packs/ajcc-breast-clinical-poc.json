@@ -1,0 +1,56 @@
+{
+  "packId": "AJCC_BREAST_CTNM_LICENSED_POC",
+  "authority": "AJCC",
+  "providerKey": "TNM_BREAST",
+  "schemaId": "BREAST",
+  "version": "AJCC 8th Edition breast cTNM — licensed-adapter proof-of-concept content (NOT production AJCC data)",
+  "effectiveFrom": "2017-01-01",
+  "provenance": "Proof-of-concept pack demonstrating the licensed content-pack seam: AJCC-licensed deployments install the real licensed rule content here; this pack contains only a tiny publicly-documented subset, clearly labelled PoC. Proprietary: rule text is hidden from UI traces.",
+  "proprietary": true,
+  "classifications": ["CLINICAL"],
+  "requiredInputs": ["tumourSizeMm", "chestWallInvolvement", "skinInvolvement", "distantMetastasis", "clinicalNodalStatus"],
+  "optionalInputs": ["inflammatoryFeatures", "regionalNodesPositive"],
+  "resultFields": ["t", "n", "m", "stageResult"],
+  "resultKey": "anatomicStage",
+  "resultLabels": {
+    "STAGE_IA": "Stage IA",
+    "STAGE_IIA": "Stage IIA",
+    "STAGE_IIB": "Stage IIB",
+    "STAGE_IIIA": "Stage IIIA",
+    "STAGE_IIIB": "Stage IIIB",
+    "STAGE_IIIC": "Stage IIIC",
+    "STAGE_IV": "Stage IV"
+  },
+  "categoryRules": {
+    "tCategory": [
+      { "id": "T4A_CHEST_WALL", "priority": 1, "conditions": { "op": "EQ", "key": "chestWallInvolvement", "value": true }, "output": "T4", "explain": "Chest wall involvement present", "source": "PoC subset — replace with licensed content" },
+      { "id": "T4B_SKIN", "priority": 2, "conditions": { "op": "EQ", "key": "skinInvolvement", "value": true }, "output": "T4", "explain": "Skin ulceration / satellite skin nodules present", "source": "PoC subset — replace with licensed content" },
+      { "id": "T4D_INFLAMMATORY", "priority": 3, "conditions": { "op": "EQ", "key": "inflammatoryFeatures", "value": true }, "output": "T4d", "explain": "Inflammatory carcinoma features", "source": "PoC subset — replace with licensed content" },
+      { "id": "T3_SIZE", "priority": 10, "conditions": { "op": "GT", "key": "tumourSizeMm", "value": 50 }, "output": "T3", "explain": "Tumour size > 50 mm", "source": "PoC subset — replace with licensed content" },
+      { "id": "T2_SIZE", "priority": 11, "conditions": { "op": "GT", "key": "tumourSizeMm", "value": 20 }, "output": "T2", "explain": "Tumour size > 20 mm and ≤ 50 mm", "source": "PoC subset — replace with licensed content" },
+      { "id": "T1_SIZE", "priority": 12, "conditions": { "op": "BETWEEN", "key": "tumourSizeMm", "min": 1, "max": 20 }, "output": "T1", "explain": "Tumour size 1–20 mm", "source": "PoC subset — replace with licensed content" },
+      { "id": "T0_NO_MASS", "priority": 13, "conditions": { "op": "EQ", "key": "tumourSizeMm", "value": 0 }, "output": "T0", "explain": "No evidence of primary tumour", "source": "PoC subset — replace with licensed content" }
+    ],
+    "nCategory": [
+      { "id": "N3C_SUPRACLAVICULAR", "priority": 1, "conditions": { "op": "EQ", "key": "clinicalNodalStatus", "value": "SUPRACLAVICULAR" }, "output": "N3c", "explain": "Supraclavicular lymph nodes involved", "source": "PoC subset — replace with licensed content" },
+      { "id": "N3B_INFRAACLAVICULAR", "priority": 2, "conditions": { "op": "EQ", "key": "clinicalNodalStatus", "value": "INFRACLAVICULAR" }, "output": "N3b", "explain": "Infraclavicular (level III axillary) lymph nodes involved", "source": "PoC subset — replace with licensed content" },
+      { "id": "N2B_FIXED", "priority": 3, "conditions": { "op": "EQ", "key": "clinicalNodalStatus", "value": "NODES_FIXED_MATTED" }, "output": "N2", "explain": "Fixed or matted ipsilateral axillary nodes", "source": "PoC subset — replace with licensed content" },
+      { "id": "N1_MOBILE", "priority": 4, "conditions": { "op": "EQ", "key": "clinicalNodalStatus", "value": "NODES_MOBILE_1_3" }, "output": "N1", "explain": "Mobile ipsilateral level I/II axillary nodes", "source": "PoC subset — replace with licensed content" },
+      { "id": "N0", "priority": 5, "conditions": { "op": "EQ", "key": "clinicalNodalStatus", "value": "NODE_NEGATIVE" }, "output": "N0", "explain": "No regional lymph node involvement", "source": "PoC subset — replace with licensed content" }
+    ],
+    "mCategory": [
+      { "id": "M1_METS", "priority": 1, "conditions": { "op": "EQ", "key": "distantMetastasis", "value": true }, "output": "M1", "explain": "Distant metastasis present (clinical/imaging assessment)", "source": "PoC subset — replace with licensed content" },
+      { "id": "M0_NO_METS", "priority": 2, "conditions": { "op": "EQ", "key": "distantMetastasis", "value": false }, "output": "cM0", "explain": "No clinical or radiographic evidence of distant metastasis", "source": "PoC subset — replace with licensed content" }
+    ],
+    "anatomicStage": [
+      { "id": "STAGE_IV_ANY_M1", "priority": 1, "conditions": { "op": "EQ", "key": "mCategory", "value": "M1" }, "output": "STAGE_IV", "explain": "Any T, any N, with distant metastasis", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIIC_ANY_N3_M0", "priority": 2, "conditions": { "op": "AND", "of": [{ "op": "IN", "key": "nCategory", "values": ["N3b", "N3c"] }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIIC", "explain": "Any T with infraclavicular or supraclavicular nodal disease, no distant metastasis", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIIB_T4_ANYN_M0", "priority": 3, "conditions": { "op": "AND", "of": [{ "op": "IN", "key": "tCategory", "values": ["T4", "T4d"] }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIIB", "explain": "T4 (chest wall / skin / inflammatory) with N0–N2, no distant metastasis", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIIA_ANYT_N2_M0", "priority": 4, "conditions": { "op": "AND", "of": [{ "op": "EQ", "key": "nCategory", "value": "N2" }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIIA", "explain": "Any T with fixed/matted regional nodes, no distant metastasis", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIB_T3_N0N1", "priority": 5, "conditions": { "op": "AND", "of": [{ "op": "EQ", "key": "tCategory", "value": "T3" }, { "op": "IN", "key": "nCategory", "values": ["N0", "N1"] }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIB", "explain": "T3 (> 50 mm) with N0 or N1", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIB_T2_N1", "priority": 6, "conditions": { "op": "AND", "of": [{ "op": "EQ", "key": "tCategory", "value": "T2" }, { "op": "EQ", "key": "nCategory", "value": "N1" }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIB", "explain": "T2 with mobile ipsilateral nodes", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IIA_T2_N0", "priority": 7, "conditions": { "op": "AND", "of": [{ "op": "EQ", "key": "tCategory", "value": "T2" }, { "op": "EQ", "key": "nCategory", "value": "N0" }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IIA", "explain": "T2 node-negative", "source": "PoC subset — replace with licensed content" },
+      { "id": "STAGE_IA_T1_N0", "priority": 8, "conditions": { "op": "AND", "of": [{ "op": "EQ", "key": "tCategory", "value": "T1" }, { "op": "EQ", "key": "nCategory", "value": "N0" }, { "op": "EQ", "key": "mCategory", "value": "cM0" }] }, "output": "STAGE_IA", "explain": "T1 node-negative", "source": "PoC subset — replace with licensed content" }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CCA Oncology Clinical Operating System</title>
+<link rel="stylesheet" href="app.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">◉</span> CCA Oncology <span class="sub">Clinical Operating System</span></div>
+  <div class="topbar-right">
+    <label>Hospital <select id="hospitalSel"></select></label>
+    <label>Signed in as <select id="userSel"></select></label>
+    <a href="/admin.html" style="color:#bfe9e3;font-size:12px;margin-left:10px">⚙ Admin</a>
+  </div>
+</header>
+
+<nav class="mainnav">
+  <button data-nav="worklist" class="navbtn active">My Tasks</button>
+  <button data-nav="patients" class="navbtn">My Patients</button>
+  <button data-nav="register" class="navbtn">Register / Referral</button>
+  <button data-nav="calendar" class="navbtn">Oncology Calendar</button>
+  <button data-nav="departments" class="navbtn">Departments</button>
+  <button data-nav="audit" class="navbtn">Audit</button>
+</nav>
+
+<main id="main"></main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+<script src="calendar-ui.js"></script>
+</body>
+</html>
