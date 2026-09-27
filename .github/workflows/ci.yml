@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Both harnesses launch Chrome via CHROME_PATH (playwright-core, no bundled
+      # browsers). Ubuntu runners ship Google Chrome at /usr/bin/google-chrome.
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Full regression: 11 unit suites + the two real-Chrome harnesses
+      # (breast 15-step presenter path, non-TNM myeloma path).
+      - run: npm test
+
+      - name: Upload browser-harness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence
+          path: test/browser-evidence*/
+          if-no-files-found: ignore
