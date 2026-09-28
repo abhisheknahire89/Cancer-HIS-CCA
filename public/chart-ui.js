@@ -3,10 +3,10 @@
 // tab bar, tab dispatch), the patient header (renderPatientHeader/pcell) and all
 // tab renderers (Overview, Consultations, Investigations, Diagnosis, MDT, Care
 // Plan, Treatment, Pharmacy, Administration, Toxicity, Response, Consent, Disease
-// Profile + its biomarker modal, Finance, Documents, Timeline) plus the el2s/yn
-// helpers. The Staging tab delegates to tabStaging (staging-ui.js) and the
+// Profile + its biomarker modal, Finance, Documents, Timeline) plus the yn helper. The Staging tab delegates to tabStaging (staging-ui.js) and the
 // Calendar tab to tabPatientCalendarV2 (calendar-ui.js) — cross-module by the
-// shared-globals convention. Loads after app.js and shares its globals
+// shared-globals convention. el2s comes from ui-helpers.js (shared module,
+// loaded first); yn is local. Loads after app.js and shares its globals
 // (el, api, state, toast, render, wrap, fmtDate) — the established
 // calendar-ui.js/staging-ui.js/treatment-ui.js convention.
 // Extracted verbatim from app.js (was lines 442–878); tabPatientCalendar remains
@@ -173,7 +173,6 @@ function tabDiagnosis(body, chart) {
   c.append(el('div', { class: 'prov' }, '✓ Signed & immutable · T/N/M deliberately excluded — staging is a separate object'));
   body.append(c);
 }
-function el2s(x) { return x === undefined || x === null ? '—' : String(x); }
 
 function tabMdt(body, chart) {
   const c = el('div', { class: 'card' });
