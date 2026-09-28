@@ -109,9 +109,14 @@ async function main() {
     // would arrive as '' / [] because the detached nodes were never in the DOM.
     const taskDone = await until(async () => {
       const t = await api('/tasks?bucket=done', {}, 'u-surg');
-      return (t.data || []).some(x => x.code === 'SURGERY_RECORD');
+      return (t.data || []).find(x => x.code === 'SURGERY_RECORD');
     });
     check('task completed via wfComplete', !!taskDone);
+    // Outcome must be truthful — pre-parameterization wfComplete hardcoded
+    // 'released to day care' on every form, including this one.
+    check('task outcome records the surgical truth (not the old hardcoded day-care string)',
+      taskDone && taskDone.outcome === 'Surgical plan and operative record signed',
+      taskDone && JSON.stringify(taskDone.outcome));
     const db = JSON.parse(fs.readFileSync(path.join(dataDir, 'db.json'), 'utf8'));
     const rec = db.operativeRecords.filter(r => r.patientUuid === pid).pop();
     check('operative record signed', !!(rec && rec.status === 'SIGNED'));

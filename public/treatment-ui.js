@@ -66,7 +66,7 @@ function formPharmacy(card, task, chart) {
   if (task.code === 'DISPENSE') {
     if (rec.status === 'DISPENSED') {
       card.append(el('div', { class: 'prov' }, '✓ Already dispensed (chain of custody recorded) — closing the dispense task.'));
-      card.append(el('button', { class: 'btn', onclick: () => wfComplete(task) }, 'Close dispense task'));
+      card.append(el('button', { class: 'btn', onclick: () => wfComplete(task, 'Dispense already recorded (chain of custody) — task closed') }, 'Close dispense task'));
       return;
     }
     if (rec.status !== 'RELEASED') { card.append(el('div', { class: 'muted' }, 'Preparation not yet RELEASED — release task must complete first.')); return; }
@@ -80,7 +80,7 @@ function formPharmacy(card, task, chart) {
         try {
           await api('/pharmacy/' + rec.uuid + '/dispense', { method: 'POST', body: { destination: destD.value, checkedOutTo: custD.value } });
           toast('Dispensed — chain of custody recorded; Day Care task generated');
-          await wfComplete(task);
+          await wfComplete(task, 'Dispensed to ' + destD.value + ' (chain of custody recorded)');
         } catch (e) { toast(e.error, true); }
       }
     }, 'Dispense to Day Care'));
@@ -112,7 +112,7 @@ function formPharmacy(card, task, chart) {
                   try {
                     await api('/pharmacy/' + mine.uuid + '/dispense', { method: 'POST', body: { destination: dest.value, checkedOutTo: custodian.value } });
                     toast('Dispensed — Day Care administration task generated');
-                    await wfComplete(task);
+                    await wfComplete(task, 'Dispensed to ' + dest.value + ' (chain of custody recorded)');
                   } catch (e) { toast(e.error, true); }
                 }
               }, 'Dispense to Day Care'));
@@ -126,8 +126,11 @@ function formPharmacy(card, task, chart) {
   card.append(verifyBtn);
 }
 
-async function wfComplete(task) {
-  if (task.uuid) { try { await api('/tasks/' + task.uuid + '/complete', { method: 'POST', body: { outcome: 'released to day care' } }); } catch (e) { /* already completed */ } }
+// Outcome records what actually happened, for the task audit trail (server
+// stores it verbatim as task.outcome). Callers pass the truthful outcome;
+// the default is for completion-only closes with no recorded action.
+async function wfComplete(task, outcome) {
+  if (task.uuid) { try { await api('/tasks/' + task.uuid + '/complete', { method: 'POST', body: { outcome: outcome || 'completed' } }); } catch (e) { /* already completed */ } }
   state.view = { name: 'worklist' };
   render();
 }

@@ -1,3 +1,10 @@
+# WARNING: branch protection on `main` requires the exact status-check context
+# "CI / test", which GitHub derives from this file's `name:` plus the job name
+# (`test`). Renaming either silently strands PRs: the required check stays in
+# "Expected" state and the merge API rejects with 405 even when the run is
+# green. Change the protection rule's contexts in the same change. Note that
+# Actions check-runs alone do NOT satisfy this rule — a legacy commit status
+# named exactly "CI / test" must also exist on the head SHA.
 name: CI
 
 on:

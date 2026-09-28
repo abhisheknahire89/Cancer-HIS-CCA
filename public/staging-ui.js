@@ -4,8 +4,9 @@
 // view, §32 summary, sign) and the §31 flag-discrepancy modal. Loads after
 // app.js and shares its globals (el, api, state, toast, render, wrap, fmtDate)
 // — the established calendar-ui.js convention.
-// tabStaging + el2s extracted verbatim from app.js (was lines 605–676);
+// tabStaging extracted verbatim from app.js (was lines 605–676);
 // flagStagingDiscrepancyModal + formStaging (was lines 1250–1667).
+// el2s comes from ui-helpers.js (shared module, loaded first).
 async function tabStaging(body, chart) {
   // §33/§35: CURRENT per-classification summary first, then full history
   let summary = null;
@@ -77,7 +78,6 @@ async function tabStaging(body, chart) {
   }
   body.append(c);
 }
-function el2s(x) { return x === undefined || x === null ? '—' : String(x); }
 // §31 Flag discrepancy: record WHY the clinician disagrees with a signed (engine-derived)
 // result and WHAT correction is requested. The signed record itself is immutable; the
 // flag routes a review task to the oncologist, and the corrected facts re-derive the

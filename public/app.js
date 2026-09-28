@@ -1105,7 +1105,7 @@ function formRadiation(card, task, chart) {
         const rx = await api('/rt-prescriptions', { method: 'POST', body: { patientUuid: chart.patient.uuid, intent: intent.value, site: site.value, dosePerFraction: dose.value, fractions: fx.value, technique: technique.value, simulationDate: sim.value } });
         await api('/rt-prescriptions/' + rx.uuid + '/approve', { method: 'POST', body: { physicsCheck: 'Plan verified — MU/dose checks passed' } });
         toast('RT plan PLANNED → APPROVED; fraction events projected');
-        await wfComplete(task);
+        await wfComplete(task, 'RT plan prescribed and approved (Planned → Approved)');
       } catch (e) { toast(e.error, true); }
     }
   }, 'Prescribe & approve (Planned → Approved)'));
@@ -1127,7 +1127,7 @@ function formSurgery(card, task, chart) {
         const rec = await api('/operative-records', { method: 'POST', body: { surgicalPlanUuid: plan.uuid, performedProcedure: procedure.value, findings: findings.value, specimens: specimen.value ? [{ site: specimen.value, laterality: laterality.value || null }] : [] } });
         await api('/operative-records/' + rec.uuid + '/sign', { method: 'POST', body: {} });
         toast('Surgical plan (signed) + operative record (signed) complete — specimen/adjuvant tasks generated');
-        await wfComplete(task);
+        await wfComplete(task, 'Surgical plan and operative record signed');
       } catch (e) { toast(e.error, true); }
     }
   }, 'Sign surgical plan & operative record'));
