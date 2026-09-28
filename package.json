@@ -6,7 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node test/stop-gates.test.js && node test/canonical-slice1.test.js && node test/calendar.test.js && node test/e2e-workflow.test.js && node test/surgical-restaging.test.js && node test/staging-engine.test.js && node test/staging-packs.test.js && node test/staging-discrepancy.test.js && node test/staging-suggestions.test.js && node test/ajcc-adapter.test.js && node test/ajcc-adapter-wire.test.js && node test/demo-harness.js && node test/demo-harness-myeloma.js",
+    "test": "node test/stop-gates.test.js && node test/canonical-slice1.test.js && node test/calendar.test.js && node test/e2e-workflow.test.js && node test/surgical-restaging.test.js && node test/staging-engine.test.js && node test/staging-packs.test.js && node test/staging-discrepancy.test.js && node test/staging-suggestions.test.js && node test/ajcc-adapter.test.js && node test/ajcc-adapter-wire.test.js && node test/ui-regression-forms.test.js && node test/demo-harness.js && node test/demo-harness-myeloma.js",
     "test:unit": "node test/stop-gates.test.js && node test/calendar.test.js",
     "test:api": "node test/canonical-slice1.test.js && node test/e2e-workflow.test.js",
     "test:browser": "node test/demo-harness.js",
