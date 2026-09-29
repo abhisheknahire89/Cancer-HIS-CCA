@@ -4,7 +4,9 @@
 # "Expected" state and the merge API rejects with 405 even when the run is
 # green. Change the protection rule's contexts in the same change. Note that
 # Actions check-runs alone do NOT satisfy this rule — a legacy commit status
-# named exactly "CI / test" must also exist on the head SHA.
+# named exactly "CI / test" must also exist on the head SHA. The final step of
+# this workflow posts that status automatically (proven 2026-09-29, PR #6);
+# do not remove it — without it every PR needs a manual shim before merging.
 name: CI
 
 on:
@@ -16,6 +18,11 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+# The status-posting step below needs write access to commit statuses.
+permissions:
+  contents: read
+  statuses: write
 
 jobs:
   test:
@@ -46,3 +53,31 @@ jobs:
           name: browser-evidence
           path: test/browser-evidence*/
           if-no-files-found: ignore
+
+      # The gate quirk (see file top): classic branch protection requires a
+      # legacy commit status named exactly "CI / test", but Actions only
+      # creates a check-run. Post that status ourselves via /statuses/<sha>
+      # so merging is automatic. On pull_request events, github.sha is the
+      # merge-ref commit — the status must go on the PR HEAD sha.
+      - name: Post "CI / test" commit status (branch-protection gate)
+        if: always()
+        env:
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          STATE_IN: ${{ job.status }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$STATE_IN" in
+            success)   STATE=success ;;
+            cancelled) STATE=error ;;
+            *)         STATE=failure ;;
+          esac
+          HTTP=$(curl -s -o /tmp/status-resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/statuses/$SHA" \
+            -d "{\"state\":\"$STATE\",\"context\":\"CI / test\",\"description\":\"Actions run ${GITHUB_RUN_ID}: ${STATE_IN}\",\"target_url\":\"$RUN_URL\"}")
+          echo "POST /repos/$REPO/statuses/$SHA state=$STATE → HTTP $HTTP"
+          cat /tmp/status-resp.json
+          [ "$HTTP" = "201" ] || { echo "::error::status POST failed — the merge gate will need a manual shim"; exit 1; }
