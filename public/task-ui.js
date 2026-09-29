@@ -68,13 +68,14 @@ async function viewTaskAction(main, task) {
   };
 
   const routes = {
-    'consult-new': () => formConsultation(card, task, chart, completeAndRoute('consultation recorded')),
+    'consult-new': () => formConsultation(card, task, chart, completeAndRoute('consultation signed')),
     'dept-lab': () => formDeptResult(card, task, chart, 'LAB', completeAndRoute('lab result finalized')),
     'dept-radiology': () => formDeptResult(card, task, chart, 'RADIOLOGY', completeAndRoute('radiology result finalized')),
     'dept-pathology': () => formDeptResult(card, task, chart, 'PATHOLOGY', completeAndRoute('pathology result finalized')),
     'diagnosis': () => formDiagnosis(card, task, chart, completeAndRoute('diagnosis signed')),
     'staging': () => formStaging(card, task, chart, completeAndRoute('staging signed')),
-    'mdt': () => formMdt(card, task, chart, completeAndRoute('MDT outcome signed')),
+    // two task codes share this screen: the coordinator records discussion (chair signs separately, §D-MDT-6), only MDT_CHAIR_SIGN actually signs
+    'mdt': () => formMdt(card, task, chart, completeAndRoute(task.code === 'MDT_CHAIR_SIGN' ? 'MDT outcome signed by chair' : 'MDT discussion recorded — routed to chair for sign-out')),
     'care-plan': () => formCarePlan(card, task, chart, completeAndRoute('care plan signed')),
     'finance': () => formFinance(card, task, chart, completeAndRoute('financial counselling signed')),
     'readiness': () => formReadiness(card, task, chart, completeAndRoute('readiness cleared')),
