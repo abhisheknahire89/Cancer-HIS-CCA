@@ -11,7 +11,8 @@
     "test:api": "node test/canonical-slice1.test.js && node test/e2e-workflow.test.js",
     "test:browser": "node test/demo-harness.js",
     "test:browser:myeloma": "node test/demo-harness-myeloma.js",
-    "test:browser:all": "node test/demo-harness.js && node test/demo-harness-myeloma.js"
+    "test:browser:all": "node test/demo-harness.js && node test/demo-harness-myeloma.js",
+    "deliver": "node scripts/deliver-pr.js"
   },
   "dependencies": {
     "express": "^4.19.2"
